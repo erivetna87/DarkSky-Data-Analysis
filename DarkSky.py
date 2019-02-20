@@ -8,7 +8,6 @@ import sys
 import pandas as pd
 import pprint
 from pandas.io.json import json_normalize
-from sqlalchemy import create_engine
 import psycopg2
 urllib3.disable_warnings()
 pd.options.display.max_seq_items
@@ -59,7 +58,6 @@ def getWeatherData():
         # DarkSkyDB is the Database file that will be inserted into SQL/used as Pandas DataFrame 
         darkSkyDF.to_csv('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv')
         
-
     return darkSkyDF
 
 
@@ -79,6 +77,7 @@ def postgres_SQL_creation():
         try:
                 cur.execute('CREATE DATABASE DarkSky')
         except psycopg2.DatabaseError:
+                print("Database Already Exists on Host/Port")
                 
         
         create_geo_table = '''CREATE TABLE IF NOT EXISTS darksky_geo
@@ -112,6 +111,7 @@ def postgres_SQL_creation():
         city_id TEXT NOT NULL,
         state_id TEXT NOT NULL,
         curr_time TIMESTAMP WITHOUT TIME ZONE NOT NULL,
+        curr_cloudcover DECIMAL NOT NULL,
         curr_precipProbability DECIMAL NOT NULL,
         curr_windSpeed DECIMAL NOT NULL,
         curr_windGust DECIMAL NOT NULL,
@@ -121,7 +121,7 @@ def postgres_SQL_creation():
         
         cur.execute(create_storm_table)
 
-postgres_SQL_creation()
+# postgres_SQL_creation()
 
 
 
