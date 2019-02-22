@@ -57,6 +57,7 @@ def getWeatherData():
                                 ]]
         # DarkSkyDB is the Database file that will be inserted into SQL/used as Pandas DataFrame 
         darkSkyDF.to_csv('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv')
+
         
     return darkSkyDF
 
@@ -64,6 +65,13 @@ def getWeatherData():
 darkSkyDF = pd.DataFrame(getWeatherData())
 print(darkSkyDF.head)
 # print(darkSkyDF.shape)
+
+#TODO: Figure out how to rename index & request_id
+def appenddata():
+        with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv', 'a+') as f:
+                darkSkyDF.to_csv(f, header=False)
+                
+appenddata()
 
 
 def postgres_SQL_creation():
