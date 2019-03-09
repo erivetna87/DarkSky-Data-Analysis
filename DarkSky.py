@@ -22,7 +22,7 @@ darkSkyData = json.loads(r.data.decode('utf-8'))
 cityDF = pd.read_csv('./foocity.csv')
 
 
-
+#TODO: timestamp API pull
 
 def getWeatherData():
     darkSkyList = []
@@ -68,14 +68,22 @@ print(darkSkyDF.head)
 
 #TODO: Figure out how to rename index & request_id
 def appenddata():
-        with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv', 'a+') as f:
-                darkSkyDF.to_csv(f, header=False)
-                
+        with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv') as inp, \
+             open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv', 'a') as out:
+             reader = csv.DictReader(inp)
+             writer = csv.DictWriter(out, fieldnames=['','request_id','city_id','state_id','county_name','latitude','longitude','curr_time','curr_temperature','curr_apparentTemperature','curr_conditions','curr_expanded_summary','curr_precipIntensity','curr_dewPoint','curr_humidity','curr_precipProbability','curr_cloudCover','curr_windSpeed','curr_windGust','curr_windBearing','curr_visibility','curr_nearestStormDistance'])
+             for row in reader:
+                     if out.tell() == 0:
+                             writer.writeheader()
+                     writer.writerow(row)
+                  
 appenddata()
 
 
 def postgres_SQL_creation():
         
+        #TODO: Review Google for masking password from Source Code
+        #Password is a garbage password unique to this Source Code
         con = psycopg2.connect(database="darksky", user="postgres",
                 password="Cheesedog1", host="localhost",
                 port=5432)
@@ -94,8 +102,7 @@ def postgres_SQL_creation():
          state_id TEXT NOT NULL,
          county_name TEXT NOT NULL,
          latitude FLOAT NOT NULL,
-         longitude FLOAT NOT NULL,
-         curr_time TIMESTAMP WITHOUT TIME ZONE NOT NULL);'''
+         longitude FLOAT NOT NULL);'''
          
         cur.execute(create_geo_table)
          
