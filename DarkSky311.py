@@ -123,7 +123,7 @@ def postgres_SQL_creation():
         
         cur.execute('CREATE DATABASE IF NOT EXISTS DarkSky')
        
-#TODO: This Table Schema does not seem to be normalized. Think of a solution for applying normalization.              
+#TODO: I know this Table Schema is not normalized. Think of a solution for applying normalization.              
         
         cur.execute("""Use DarkSky""")
         create_geo_table = """CREATE TABLE IF NOT EXISTS darksky_geo
