@@ -22,7 +22,7 @@ urllib3.disable_warnings()
 pd.options.display.max_seq_items
 
 #Receiving API Data From Darksky in json format
-#TODO: Delete this
+#TODO: Delete this before final commit.
 # http = urllib3.PoolManager()
 # r = http.request('GET',"https://api.darksky.net/forecast/ac89150eb898f7dda846b45ca4896211/37.8267,-122.4233",retries=3)
 # r.status
