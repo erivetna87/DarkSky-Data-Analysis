@@ -112,7 +112,7 @@ def sql_connect():
         
 
 #Restructure Tables to actual Relational Database
-def postgres_SQL_creation():
+def mySQL_table_creation():
         #TODO: Review Google for masking password from Source Code
         #Password is a garbage password unique to this Source Code
         con = mysql.connector.connect(user="root",
@@ -189,7 +189,7 @@ def postgres_SQL_creation():
         cur.execute(create_austin_311_table)
 
 
-postgres_SQL_creation()
+mySQL_table_creation()
 
 #Load Data Into 
 def sql_insert():
