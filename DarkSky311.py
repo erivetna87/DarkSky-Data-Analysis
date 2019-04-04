@@ -120,6 +120,7 @@ def postgres_SQL_creation():
                 port=3306)
         con.autocommit = True
         cur = con.cursor()
+        
         cur.execute('CREATE DATABASE IF NOT EXISTS DarkSky')
        
 #TODO: This Table Schema does not seem to be normalized. Think of a solution for applying normalization.              
@@ -142,20 +143,20 @@ def postgres_SQL_creation():
                 city TEXT NOT NULL,
                 state_id TEXT NOT NULL,
                 curr_time DATETIME NOT NULL,
-                curr_tempe DECIMAL NOT NULL,
+                curr_temperature DECIMAL NOT NULL,
                 curr_apparentTemperature FLOAT NOT NULL,
                 curr_conditions TEXT NOT NULL,
-                curr_expanded_summary TEXT NOT NULL,
-                curr_precipIntensity DECIMAL NOT NULL,
-                curr_dewPoint DECIMAL NOT NULL,
-                curr_humidity DECIMAL NOT NULL,
-                curr_cloudcover DECIMAL NOT NULL,
-                curr_precipProbability DECIMAL NOT NULL,
-                curr_windSpeed DECIMAL NOT NULL,
-                curr_windGust DECIMAL NOT NULL,
-                curr_windBearing INT NOT NULL,
-                curr_visibility DECIMAL NOT NULL, 
-                curr_nearestStormDistance INT NOT NULL,
+                curr_expanded_summary VARCHAR(255),
+                curr_precipIntensity INT,
+                curr_dewPoint FLOAT,
+                curr_humidity FLOAT,
+                curr_cloudcover FLOAT,
+                curr_precipProbability FLOAT,
+                curr_windSpeed FLOAT,
+                curr_windGust FLOAT,
+                curr_windBearing INT,
+                curr_visibility FLOAT, 
+                curr_nearestStormDistance INT,
                 FOREIGN KEY fk_city(request_id) REFERENCES darksky_geo(request_id));"""
         
         cur.execute(create_weather_table)
@@ -190,7 +191,7 @@ def postgres_SQL_creation():
 
 postgres_SQL_creation()
 
-
+#Load Data Into 
 def sql_insert():
         con = mysql.connector.connect(user="root",
         password="Cheesecloth1", host="localhost",
@@ -199,58 +200,46 @@ def sql_insert():
         cur = con.cursor(dictionary=True)
         cur.execute("""Use DarkSky""")
 
+        """Inserting data from CSV to SQL without Pandas"""
+        #TODO: Read more about how to do this with strictly Python/CSV Module when working with larger datasets as to not always rely on Pandas Library
+        
         with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv', 'r') as f:
             reader = csv.DictReader(f)
-            to_db = [(i['city'],i['state_id'],i['county_name'],i['latitude'],i['longitude'],i['curr_time']) for i in reader]
-            cur.executemany("INSERT INTO darksky_geo (city_id,city,state_id,county_name,latitude,longitude,curr_time) VALUES (NULL,%s,%s,%s,%s,%s,%s);",to_db)
-
-        # p = Popen(["mysql", "-u", "root", "-p Cheesecloth1"],
-        # stdin=PIPE, stderr=STDOUT)
-        # p.communicate(b"exit")
-        # if p.returncode != 0:
-        #         print('incorrect password')
-
+            to_db_geo = [(i['city'],i['state_id'],i['county_name'],i['latitude'],i['longitude'],i['curr_time']) for i in reader]
+            cur.executemany("INSERT INTO darksky_geo (city_id,city,state_id,county_name,latitude,longitude,curr_time) VALUES (NULL,%s,%s,%s,%s,%s,%s);",to_db_geo)
+        
+        """Using Pandas/SQLalchemy to create SQL database from CSV file DarkSkyDB"""
+        
         engine = create_engine('mysql+mysqlconnector://root:Cheesecloth1@localhost/darksky')
 
-        austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311.csv')
-        austin_311_df = pd.DataFrame(austin_311_df)
-        austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
-        austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
-        austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
-        austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
-        austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
-
-        try:
-                austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False)
-        except ValueError:
-                print('austin_311 table already exists')
+        darksky_weather_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv')
+        darksky_weather_df = pd.DataFrame(darksky_weather_df)
+        darksky_weather_df.drop(['latitude','longitude','county_name','Unnamed: 0'],axis=1,inplace=True)
+        darksky_weather_df['curr_time'] = pd.to_datetime(darksky_weather_df['curr_time'])
         
-      
-
-
-
-
-
-        # database_username = 'root'
-        # database_password = 'Cheesecloth1'
-        # database_ip       = '127.0.0.1'
-        # database_name     = 'darksky'
+        """Ensuring the Primary Key Matches the Foreign Key for darksky_geo and darksky_weather"""
         
-        # engine = sqlalchemy.create_engine('mysql+pymysql://root:@localhost/pd_test')
-        # austin_311 = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311.csv', sep='\t', encoding='utf-8',usecols=['service_request_id'],['sr_description'],['method_received'],
-        #                                                                            ['sr_status'],['status_date_change'],
-        #                                                                            ['created_date'],['last_updated'],['close_date'],
-        #                                                                            ['sr_location'],['street_number'],['street_name'],
-        #                                                                            ['city'],['zip_code'],['county_name'],['state_plane_x_coord'],['state_plane_y_coord'],['longitude'],
-        #                                                                            ['latitude'],['lat_long'],['council_district'],['map_page'],['map_tile'])
+        #TODO: Look into how to normalize this database
+        
+        darksky_geo_requests = pd.read_sql_table('darksky_geo',con=engine)
+        darksky_weather_df['request_id'] = ''
+        darksky_weather_df['request_id'] = darksky_geo_requests['request_id']
 
+        """Using Pandas to Insert Darksky Data into mySQL Database"""
+        darksky_weather_df.to_sql(name='darksky_weather', con=engine, if_exists='replace',index=False)
 
-        # with open('/Users/ericrivetna/desktop/data analysis/Austin_311.csv', 'rb') as out:
-        #         reader = csv.DictReader(out)
-        #         print(reader[0])
-                # to_db = [(i['sr_request_id'],i['sr_type_desc'],i['sr_method_received_desc'],i['sr_status_desc'],i['sr_status_date'],i['sr_created_date'],i['sr_updated_date'],i['sr_closed_date'],i['sr_location'],i['sr_location_street_number'],i['sr_location_street_name'],i['sr_location_city'],i['sr_location_zip_code'],i['sr_location_county'],i['sr_location_x'],i['sr_location_y'],i['sr_location_long'],i['sr_location_lat'],i['sr_location_lat_long'],i['sr_location_council_district'],i['sr_location_map_page'],i['sr_location_map_tile']) for i in to_db]
-                
-                # for line in to_db:
-                #         cur.executemany("INSERT INTO austin_311 (sr_request_id,sr_type_desc,sr_method_received_desc,sr_status_desc,sr_status_date,sr_created_date,sr_updated_date,sr_closed_date,sr_location,sr_location_street_number,sr_location_street_name,sr_location_city,sr_location_zip_code,sr_location_county,sr_location_x,sr_location_y,sr_location_long,sr_location_lat,sr_location_lat_long,sr_location_council_district,sr_location_map_page,sr_location_map_tile) VALUES (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s);",line)
+        #TODO: Write an if statement that checks if this block code needs to be executed. The load time to read_csv is too long. 
+        # austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311_two.csv', dtype='unicode')
+        # austin_311_df = pd.DataFrame(austin_311_df)
+        # austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
+        # austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
+        # austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
+        # austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
+        # austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
+
+        # try:
+        #         austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False,chunksize=1000)
+        # except ValueError:
+        #         print('austin_311 table already exists')
 
 sql_insert()
