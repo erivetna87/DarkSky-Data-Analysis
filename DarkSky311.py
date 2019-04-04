@@ -191,13 +191,13 @@ def mySQL_table_creation():
 
 mySQL_table_creation()
 
-#Load Data Into 
-def sql_insert():
+#Load Data Into mySQL database
+def mySQL_data_insert():
         con = mysql.connector.connect(user="root",
         password="Cheesecloth1", host="localhost",
         port=3306)
         con.autocommit = True
-        cur = con.cursor(dictionary=True)
+        cur = con.cursor()
         cur.execute("""Use DarkSky""")
 
         """Inserting data from CSV to SQL without Pandas"""
@@ -206,7 +206,9 @@ def sql_insert():
         with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv', 'r') as f:
             reader = csv.DictReader(f)
             to_db_geo = [(i['city'],i['state_id'],i['county_name'],i['latitude'],i['longitude'],i['curr_time']) for i in reader]
-            cur.executemany("INSERT INTO darksky_geo (city_id,city,state_id,county_name,latitude,longitude,curr_time) VALUES (NULL,%s,%s,%s,%s,%s,%s);",to_db_geo)
+            cur.execute("delete from darksky_geo;")
+            cur.executemany("INSERT INTO darksky_geo (city_id,city,state_id,county_name,latitude,longitude,\
+                             curr_time) VALUES (NULL,%s,%s,%s,%s,%s,%s);",to_db_geo)
         
         """Using Pandas/SQLalchemy to create SQL database from CSV file DarkSkyDB"""
         
@@ -229,17 +231,17 @@ def sql_insert():
         darksky_weather_df.to_sql(name='darksky_weather', con=engine, if_exists='replace',index=False)
 
         #TODO: Write an if statement that checks if this block code needs to be executed. The load time to read_csv is too long. 
-        # austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311_two.csv', dtype='unicode')
-        # austin_311_df = pd.DataFrame(austin_311_df)
-        # austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
-        # austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
-        # austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
-        # austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
-        # austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
+        """austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311_two.csv', dtype='unicode')
+        austin_311_df = pd.DataFrame(austin_311_df)
+        austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
+        austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
+        austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
+        austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
+        austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
 
-        # try:
-        #         austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False,chunksize=1000)
-        # except ValueError:
-        #         print('austin_311 table already exists')
+        try:
+                austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False,chunksize=1000)
+        except ValueError:
+                print('austin_311 table already exists')"""
 
-sql_insert()
+mySQL_data_insert()
