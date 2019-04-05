@@ -221,7 +221,7 @@ def mySQL_data_insert():
         
         """Ensuring the Primary Key Matches the Foreign Key for darksky_geo and darksky_weather"""
         
-        #TODO: Look into how to normalize this database
+       #TODO: This is broken. For loop the series to += 1 for each request_id
         
         darksky_geo_requests = pd.read_sql_table('darksky_geo',con=engine)
         darksky_weather_df['request_id'] = ''
