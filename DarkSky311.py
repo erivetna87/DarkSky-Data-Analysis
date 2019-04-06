@@ -22,7 +22,7 @@ urllib3.disable_warnings()
 pd.options.display.max_seq_items
 
 #Receiving API Data From Darksky in json format
-#TODO: Delete this before final commit.
+#TODO: Delete this
 # http = urllib3.PoolManager()
 # r = http.request('GET',"https://api.darksky.net/forecast/ac89150eb898f7dda846b45ca4896211/37.8267,-122.4233",retries=3)
 # r.status
@@ -113,8 +113,8 @@ def sql_connect():
 
 #Restructure Tables to actual Relational Database
 def mySQL_table_creation():
-        #TODO: Review Google for masking password from Source Code
-        #Password is a garbage password unique to this Source Code
+        """UNIQUE GARBAGE PASSWORD USED FOR mySQL"""
+        #TODO:  Google how to hide private information in source code
         con = mysql.connector.connect(user="root",
                 password="Cheesecloth1", host="localhost",
                 port=3306)
@@ -193,12 +193,14 @@ mySQL_table_creation()
 
 #Load Data Into mySQL database
 def mySQL_data_insert():
+        """UNIQUE GARBAGE PASSWORD USED FOR mySQL"""
+        #TODO:  Google how to hide private information in source code
         con = mysql.connector.connect(user="root",
         password="Cheesecloth1", host="localhost",
         port=3306)
         con.autocommit = True
         cur = con.cursor()
-        cur.execute("""Use DarkSky""")
+        cur.execute("Use DarkSky")
 
         """Inserting data from CSV to SQL without Pandas"""
         #TODO: Read more about how to do this with strictly Python/CSV Module when working with larger datasets as to not always rely on Pandas Library
@@ -219,12 +221,10 @@ def mySQL_data_insert():
         darksky_weather_df.drop(['latitude','longitude','county_name','Unnamed: 0'],axis=1,inplace=True)
         darksky_weather_df['curr_time'] = pd.to_datetime(darksky_weather_df['curr_time'])
         
+        #TODO: This is broken. Fix by iterating request_id +1 for each row. 
         """Ensuring the Primary Key Matches the Foreign Key for darksky_geo and darksky_weather"""
         
-       #TODO: This is broken. For loop the series to += 1 for each request_id
-        
         darksky_geo_requests = pd.read_sql_table('darksky_geo',con=engine)
-        darksky_weather_df['request_id'] = ''
         darksky_weather_df['request_id'] = darksky_geo_requests['request_id']
 
         """Using Pandas to Insert Darksky Data into mySQL Database"""
