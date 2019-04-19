@@ -6,13 +6,23 @@ import sqlite3
 import urllib3
 import sys
 import pandas as pd
-import pprint
+import pprint as pp
+import matplotlib.pyplot as plt
+import numpy as np
+import seaborn as sns
 from sqlalchemy import create_engine
 from pandas.io.json import json_normalize
+import pandas.io.sql as psql
 import psycopg2
 import mysql.connector
 import appscript 
 import subprocess
+import pickle
+
+pd.set_option('display.max_rows', 500)
+pd.set_option('display.max_columns', 500)
+pd.set_option('display.width', 1000)
+plt.style.use('seaborn-white')
 
 
 # appscript.app('Terminal').do_script('/usr/local/mysql/bin/mysql -u root -p')
@@ -78,8 +88,8 @@ def getWeatherData():
     return darkSkyDF
 
 
-darkSkyDF = pd.DataFrame(getWeatherData())
-print(darkSkyDF.head)
+# darkSkyDF = pd.DataFrame(getWeatherData())
+# print(darkSkyDF.head)
 # print(darkSkyDF.shape)
 
 #TODO: Figure out how to rename index & request_id
@@ -102,13 +112,13 @@ def appenddata():
                   
 appenddata()
 
-def sql_connect():
-        con = mysql.connector.connect(user="root",
-        password="Cheesecloth1", host="localhost",
-        port=3306)
-        con.autocommit = True
-        cur = con.cursor()
-        cur.execute("""Use DarkSky""")
+# def sql_connect():
+#         con = mysql.connector.connect(user="root",
+#         password="Cheesecloth1", host="localhost",
+#         port=3306)
+#         con.autocommit = True
+#         cur = con.cursor()
+#         cur.execute("""Use DarkSky""")
         
 
 #Restructure Tables to actual Relational Database
@@ -191,10 +201,14 @@ def mySQL_table_creation():
 
 mySQL_table_creation()
 
+
+
+
 #Load Data Into mySQL database
 def mySQL_data_insert():
         """UNIQUE GARBAGE PASSWORD USED FOR mySQL"""
         #TODO:  Google how to hide private information in source code
+        #TODO: Make the SQL connection a function
         con = mysql.connector.connect(user="root",
         password="Cheesecloth1", host="localhost",
         port=3306)
@@ -231,17 +245,53 @@ def mySQL_data_insert():
         darksky_weather_df.to_sql(name='darksky_weather', con=engine, if_exists='replace',index=False)
 
         #TODO: Write an if statement that checks if this block code needs to be executed. The load time to read_csv is too long. 
-        """austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311_two.csv', dtype='unicode')
-        austin_311_df = pd.DataFrame(austin_311_df)
-        austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
-        austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
-        austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
-        austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
-        austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
+        # austin_311_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/Austin_311_two.csv', dtype='unicode')
+        # austin_311_df = pd.DataFrame(austin_311_df)
+        # austin_311_df['sr_status_date'] = pd.to_datetime(austin_311_df['sr_status_date'])
+        # austin_311_df['sr_created_date'] = pd.to_datetime(austin_311_df['sr_created_date'])
+        # austin_311_df['sr_updated_date'] = pd.to_datetime(austin_311_df['sr_updated_date'])
+        # austin_311_df['sr_closed_date'] = pd.to_datetime(austin_311_df['sr_closed_date'])
+        # austin_311_df.dropna(axis=0,how='any',inplace=True,thresh=3)
 
-        try:
-                austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False,chunksize=1000)
-        except ValueError:
-                print('austin_311 table already exists')"""
+        # try:
+        #         austin_311_df.to_sql(name='austin_311', con=engine, if_exists='fail',index=False,chunksize=1000)
+        # except ValueError:
+        #         print('austin_311 table already exists')
 
 mySQL_data_insert()
+
+def austin_311_pickle():
+        """Querying the SQL Database takes upwards of 2 minutes to run. Pickling the DataFrame object decreases retrieval time to <2 Seconds"""
+        con = mysql.connector.connect(user="root",
+        password="Cheesecloth1", host="localhost",
+        port=3306)
+        con.autocommit = True
+        cur = con.cursor()
+        cur.execute("Use DarkSky")
+        engine = create_engine('mysql+mysqlconnector://root:Cheesecloth1@localhost/darksky')
+        
+        austin_311_df = pd.read_sql_table('austin_311',con=engine)
+        austin_311_df = pd.DataFrame(austin_311_df)
+        austin_311_df = austin_311_df.to_pickle("austin_311_df.pkl")
+
+
+# austin_311_pickle()
+
+def histogram_austin_311():
+        austin_311_df = pd.read_pickle("austin_311_df.pkl")
+        """Visualizing the Top 10 Call Types to Austin 311"""
+        """SQL Command SELECT sr_type_desc, COUNT(*) as 'num_of_occurences' FROM austin_311 GROUP BY sr_type_desc ORDER BY COUNT(*) DESC LIMIT 10;"""
+        histogram_count_dict = austin_311_df['sr_type_desc'].value_counts().nlargest(10).to_dict()
+        plt.bar(histogram_count_dict.keys(),histogram_count_dict.values(),width=0.8)
+        plt.xlabel('Types of Calls', fontsize=9)
+        plt.ylabel('No. of occurences', fontsize=12)
+        plt.xticks(fontsize=8.7, rotation=45)
+        plt.title('Austin 311 Calls by Type')
+        plt.show()
+
+        
+
+
+histogram_austin_311()
+
+
