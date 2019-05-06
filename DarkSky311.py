@@ -8,6 +8,7 @@ import sys
 import pandas as pd
 import pprint as pp
 import matplotlib.pyplot as plt
+import matplotlib as mpl
 import numpy as np
 import seaborn as sns
 from sqlalchemy import create_engine
@@ -19,10 +20,10 @@ import appscript
 import subprocess
 import pickle
 
-pd.set_option('display.max_rows', 500)
-pd.set_option('display.max_columns', 500)
-pd.set_option('display.width', 1000)
-plt.style.use('seaborn-white')
+# pd.set_option('display.max_rows', 500)
+# pd.set_option('display.max_columns', 500)
+# pd.set_option('display.width', 1000)
+# plt.style.use('seaborn-white')
 
 
 # appscript.app('Terminal').do_script('/usr/local/mysql/bin/mysql -u root -p')
@@ -48,8 +49,8 @@ def getWeatherData():
     darkSkyList = []
     cityDF = pd.read_csv('./foocity.csv')
     cityData = cityDF.to_dict('series')
-    for (k,v), (k2,v2),(k3, v3), (k4, v4), (k5,v5) in zip(cityData['lat'].items(),cityData['lng'].items(),\
-        cityData['city'].items(),cityData['state_id'].items(),cityData['county_name'].items()):
+    for (k,v), (k2,v2),(k3, v3), (k4, v4), (k5,v5),(k6,v6) in zip(cityData['lat'].items(),cityData['lng'].items(),\
+        cityData['city'].items(),cityData['state_id'].items(),cityData['county_name'].items(),cityData['id'].items()):
         http = urllib3.PoolManager()
         r = http.request('GET',"https://api.darksky.net/forecast/ac89150eb898f7dda846b45ca4896211/{},{}?exclude=minutely,hourly,daily,alerts".format(v, v2),\
                  retries=3)
@@ -57,7 +58,7 @@ def getWeatherData():
         data['city'] = v3
         data['state_id'] = v4
         data['county_name'] = v5
-        data['city_id'] = ''
+        data['city_id'] = v6
         darkSkyList.append(data)
         df = json_normalize(darkSkyList)
         #DarkSky_JSON_API is utilized for observing the JSON API pulls before further manipulation
@@ -88,8 +89,8 @@ def getWeatherData():
     return darkSkyDF
 
 
-# darkSkyDF = pd.DataFrame(getWeatherData())
-# print(darkSkyDF.head)
+darkSkyDF = pd.DataFrame(getWeatherData())
+print(darkSkyDF.head)
 # print(darkSkyDF.shape)
 
 #TODO: Figure out how to rename index & request_id
@@ -137,22 +138,23 @@ def mySQL_table_creation():
         
         cur.execute("""Use DarkSky""")
         create_geo_table = """CREATE TABLE IF NOT EXISTS darksky_geo
-                (request_id INT PRIMARY KEY AUTO_INCREMENT,
-                city_id INT,
-                city TEXT NOT NULL,
-                state_id TEXT NOT NULL,
+                (city_id VARCHAR(255),
+                city VARCHAR(255) NOT NULL,
+                state_id VARCHAR(255) NOT NULL,
                 county_name TEXT NOT NULL,
                 latitude FLOAT NOT NULL,
                 longitude FLOAT NOT NULL,
-                curr_time DATETIME NOT NULL);"""
+                curr_time DATETIME NOT NULL,
+                CONSTRAINT pk_DateLocationPairIDs PRIMARY KEY (city_id,curr_time,latitude,longitude));"""
         cur.execute(create_geo_table)
          
         create_weather_table = """CREATE TABLE IF NOT EXISTS darksky_weather
-                (request_id INT AUTO_INCREMENT,
-                city_id INT, 
-                city TEXT NOT NULL,
-                state_id TEXT NOT NULL,
+                (city_id VARCHAR(255) PRIMARY KEY, 
+                city VARCHAR(255) NOT NULL,
+                state_id VARCHAR(255) NOT NULL,
                 curr_time DATETIME NOT NULL,
+                latitude FLOAT NOT NULL,
+                longitude FLOAT NOT NULL,
                 curr_temperature DECIMAL NOT NULL,
                 curr_apparentTemperature FLOAT NOT NULL,
                 curr_conditions TEXT NOT NULL,
@@ -167,7 +169,7 @@ def mySQL_table_creation():
                 curr_windBearing INT,
                 curr_visibility FLOAT, 
                 curr_nearestStormDistance INT,
-                FOREIGN KEY fk_city(request_id) REFERENCES darksky_geo(request_id));"""
+                FOREIGN KEY fk_DateLocationPairIDs(city_id,curr_time) REFERENCES darksky_geo(city_id,curr_time));"""
         
         cur.execute(create_weather_table)
 
@@ -199,6 +201,7 @@ def mySQL_table_creation():
         cur.execute(create_austin_311_table)
 
 
+
 mySQL_table_creation()
 
 
@@ -221,10 +224,10 @@ def mySQL_data_insert():
         
         with open('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv', 'r') as f:
             reader = csv.DictReader(f)
-            to_db_geo = [(i['city'],i['state_id'],i['county_name'],i['latitude'],i['longitude'],i['curr_time']) for i in reader]
+            to_db_geo = [(i['city_id'],i['city'],i['state_id'],i['county_name'],i['latitude'],i['longitude'],i['curr_time']) for i in reader]
             cur.execute("delete from darksky_geo;")
             cur.executemany("INSERT INTO darksky_geo (city_id,city,state_id,county_name,latitude,longitude,\
-                             curr_time) VALUES (NULL,%s,%s,%s,%s,%s,%s);",to_db_geo)
+                             curr_time) VALUES (%s,%s,%s,%s,%s,%s,%s);",to_db_geo)
         
         """Using Pandas/SQLalchemy to create SQL database from CSV file DarkSkyDB"""
         
@@ -232,14 +235,13 @@ def mySQL_data_insert():
 
         darksky_weather_df = pd.read_csv('/Users/ericrivetna/desktop/data analysis/DarkSkyDB.csv')
         darksky_weather_df = pd.DataFrame(darksky_weather_df)
-        darksky_weather_df.drop(['latitude','longitude','county_name','Unnamed: 0'],axis=1,inplace=True)
+        darksky_weather_df.drop(['request_id','county_name','Unnamed: 0'],axis=1,inplace=True)
         darksky_weather_df['curr_time'] = pd.to_datetime(darksky_weather_df['curr_time'])
         
-        #TODO: This is broken. Fix by iterating request_id +1 for each row. 
-        """Ensuring the Primary Key Matches the Foreign Key for darksky_geo and darksky_weather"""
         
-        darksky_geo_requests = pd.read_sql_table('darksky_geo',con=engine)
-        darksky_weather_df['request_id'] = darksky_geo_requests['request_id']
+        # darksky_geo_requests = pd.read_sql_table('darksky_geo',con=engine)
+        # darksky_weather_requests = pd.read_sql_table('darksky_geo',con=engine)
+
 
         """Using Pandas to Insert Darksky Data into mySQL Database"""
         darksky_weather_df.to_sql(name='darksky_weather', con=engine, if_exists='replace',index=False)
@@ -287,11 +289,70 @@ def histogram_austin_311():
         plt.ylabel('No. of occurences', fontsize=12)
         plt.xticks(fontsize=8.7, rotation=45)
         plt.title('Austin 311 Calls by Type')
-        plt.show()
+        # plt.show()
+
+        """Visualizing the Top 10 Zip Codes calling Austin 311"""
+        """SQL Command select sr_location_zip_code, COUNT(*) sr_location_zip_code FROM austin_311 GROUP BY sr_location_zip_code ORDER BY COUNT(*) DESC LIMIT 10;"""
+        zip_count_dict = austin_311_df['sr_location_zip_code'].value_counts().nlargest(10).to_dict()
+        plt.bar(zip_count_dict.keys(),zip_count_dict.values(),width=0.8)
+        plt.xlabel('Austin Zipcodes')
+        plt.ylabel('Volume of calls per Zipcode')
+        plt.xticks(fontsize=8.7, rotation=45)
+        plt.title('Volume of Austin 311 Calls per Zipcode')
+        # plt.show()
+
+        """Obtaining Year of Status Date from austin_311_df. Required cleaning last 2 characters"""
+        austin_311_df['Year'] = austin_311_df['sr_status_date'].dt.year
+        austin_311_df['Year'] = austin_311_df['Year'].map(lambda x: str(x)[:-2])
+        """Obtaining Month of Status Date from austin_311_df. Required cleaning last 2 characters"""
+        austin_311_df['Month'] = austin_311_df['sr_status_date'].dt.month
+        austin_311_df['Month'] = austin_311_df['Month'].map(lambda x: str(x)[:-2])
+        """Obtaining Day of Status Date from austin_311_df. Required cleaning last 2 characters"""
+        austin_311_df['Day'] = austin_311_df['sr_status_date'].dt.day
+        austin_311_df['Day']= austin_311_df['Day'].map(lambda x: str(x)[:-2])
+
+        df1 = austin_311_df[['Year','sr_location_zip_code']]
+        df1.dropna(axis='columns',inplace=True)
+        # zipcode_by_year = df1.pivot_table(index=austin_311_df['Year'],columns=['sr_location_zip_code'],aggfunc='count', fill_value=0)
+        """Quick Data Cleaning with CSV file"""
+        df1.to_csv('zipcode_by_year2.csv')
+        zipcode_by_year = pd.read_csv('zipcode_by_year.csv')
+        
+        
+
+
+# histogram_austin_311()
+
+# def dates():
+#         austin_311_df = pd.read_pickle("austin_311_df.pkl")
+#         """Obtaining Year of Status Date from austin_311_df. Required cleaning last 2 characters"""
+#         austin_311_df['Year'] = austin_311_df['sr_status_date'].dt.year
+#         austin_311_df['Year'] = austin_311_df['Year'].map(lambda x: str(x)[:-2])
+#         """Obtaining Month of Status Date from austin_311_df. Required cleaning last 2 characters"""
+#         austin_311_df['Month'] = austin_311_df['sr_status_date'].dt.month
+#         austin_311_df['Month'] = austin_311_df['Month'].map(lambda x: str(x)[:-2])
+#         """Obtaining Day of Status Date from austin_311_df. Required cleaning last 2 characters"""
+#         austin_311_df['Day'] = austin_311_df['sr_status_date'].dt.day
+#         austin_311_df['Day']= austin_311_df['Day'].map(lambda x: str(x)[:-2])
+#         print(austin_311_df['sr_location_zip_code'].value_counts().sum())
+
+#         df1 = austin_311_df[['Year','sr_location_zip_code']]
+#         zipcode_by_year = df1.pivot_table(index=austin_311_df['Year'],columns=['sr_location_zip_code'],aggfunc='count', fill_value=0)
+#         zipcode_by_year.drop(['n'],inplace=True)
+#         """Quick Data Cleaning with CSV file"""
+#         # zipcode_by_year.to_csv('zipcode_by_year.csv')
+#         zipcode_by_year = pd.read_csv('zipcode_by_year.csv')
+#         zipcode_by_year.plot()
+#         plt.show()
+
+
 
         
 
 
-histogram_austin_311()
+
+
+
+
 
 
