@@ -6,7 +6,7 @@ import sqlite3
 import urllib3
 import sys
 import pandas as pd
-import pprint as pp
+from pprint import pprint
 import matplotlib.pyplot as plt
 import matplotlib as mpl
 import numpy as np
@@ -19,6 +19,7 @@ import mysql.connector
 import appscript 
 import subprocess
 import pickle
+from datetime import datetime, timezone
 
 # pd.set_option('display.max_rows', 500)
 # pd.set_option('display.max_columns', 500)
@@ -89,8 +90,8 @@ def getWeatherData():
     return darkSkyDF
 
 
-darkSkyDF = pd.DataFrame(getWeatherData())
-print(darkSkyDF.head)
+# darkSkyDF = pd.DataFrame(getWeatherData())
+# print(darkSkyDF.head)
 # print(darkSkyDF.shape)
 
 #TODO: Figure out how to rename index & request_id
@@ -260,10 +261,10 @@ def mySQL_data_insert():
         # except ValueError:
         #         print('austin_311 table already exists')
 
-mySQL_data_insert()
+# mySQL_data_insert()
 
 def austin_311_pickle():
-        """Querying the SQL Database takes upwards of 2 minutes to run. Pickling the DataFrame object decreases retrieval time to <2 Seconds"""
+        """Querying the SQL Database takes upwards of 2 minutes to run. Pickling the DataFrame object decreases retrieval time to <1 Seconds"""
         con = mysql.connector.connect(user="root",
         password="Cheesecloth1", host="localhost",
         port=3306)
@@ -278,6 +279,106 @@ def austin_311_pickle():
 
 
 # austin_311_pickle()
+
+
+# def getWeatherData_311():
+#     austin_darksky_311 = []
+#     austin_311_df = pd.read_pickle("austin_311_df.pkl")
+#     austin_311_df.dropna(inplace=True)
+
+#     austin_311_df['sr_location_lat'] = austin_311_df['sr_location_lat'].map(lambda x: str(x)[:-4])
+#     austin_311_df['sr_location_long'] = austin_311_df['sr_location_long'].map(lambda x: str(x)[:-4])
+    
+
+#     latlong_dict = {k:v for (k,v) in zip(austin_311_df['sr_location_lat'].unique(),austin_311_df['sr_location_long'].unique())}
+
+
+    
+
+#     pprint(len(latlong_dict))
+    
+            
+            
+
+    
+
+    
+ 
+  
+#     austin_311_df['sr_status_date'] = datetime.timestamp(austin_311_df['sr_status_date'])
+#     for i in austin_311_df['sr_status_date'].items():
+#             i = datetime.timestamp(i)
+#             austin_311_df['sr_status_date'] = str(i)
+#             austin_311_df['sr_status_date'] = austin_311_df['sr_status_date'][:-2]
+  
+    
+#     austin_311_df['sr_status_date'] = austin_311_df['sr_status_date'].map(lambda x: str(x)[:-2])
+    
+#     for (k,v),(k2,v2),(k3,v3),(k4,v4) in zip(austin_311_df['sr_request_id'].items(),austin_311_df['sr_location_lat'].items(),austin_311_df['sr_location_long'].items(),\
+#         austin_311_df['sr_status_date'].items()):
+# #         if (k < 2 and k2 < 2 and k3 < 2 and k4 < 2):
+#                 print(v,v2,v3,v4)
+                # http = urllib3.PoolManager()
+                # r = http.request('GET',"https://api.darksky.net/forecast/ac89150eb898f7dda846b45ca4896211/{},{},{}?exclude=minutely,hourly,daily,alerts".format(v2,v3,v4),retries=3)
+                # data = json.loads(r.data.decode('utf-8'))
+                # data['sr_request_id'] = v
+                # austin_darksky_311.append(data)
+                # df = json_normalize(austin_darksky_311)
+                # df.to_csv('/Users/ericrivetna/desktop/data analysis/DarkSky311_JSON_API.csv')
+                # dataCSV = pd.read_csv('/Users/ericrivetna/desktop/data analysis/DarkSky311_JSON_API.csv')
+                # darkSky311DF = pd.DataFrame(dataCSV)
+                
+
+
+            
+           
+    
+
+#     for (k,v),(k2,v2) in zip(austin_311_lat['sr_location_lat'].items(),austin_311_long['sr_location_long'].items()):
+#             print(k,k2)
+            
+    
+
+    
+#     for (k,v), (k2,v2),(k3, v3), (k4, v4), (k5,v5),(k6,v6) in zip(cityData['lat'].items(),cityData['lng'].items(),\
+#         cityData['city'].items(),cityData['state_id'].items(),cityData['county_name'].items(),cityData['id'].items()):
+#         http = urllib3.PoolManager()
+#         r = http.request('GET',"https://api.darksky.net/forecast/ac89150eb898f7dda846b45ca4896211/{},{}?exclude=minutely,hourly,daily,alerts".format(v, v2),\
+#                  retries=3)
+#         data = json.loads(r.data.decode('utf-8'))
+#         data['city'] = v3
+#         data['state_id'] = v4
+#         data['county_name'] = v5
+#         data['city_id'] = v6
+#         darkSkyList.append(data)
+#         df = json_normalize(darkSkyList)
+#         #DarkSky_JSON_API is utilized for observing the JSON API pulls before further manipulation
+#         df.to_csv('/Users/ericrivetna/desktop/data analysis/DarkSky_JSON_API.csv') 
+#         dataCSV = pd.read_csv('/Users/ericrivetna/desktop/data analysis/DarkSky_JSON_API.csv')
+#         #Converted to a DataFrame to rename columns using Pandas Library
+#         darkSkyDF = pd.DataFrame(dataCSV)
+
+#         darkSkyDF.rename(columns = lambda x: x.replace('currently.','curr_')[0:],inplace = True)
+#         darkSkyDF.rename(columns = lambda x: x.replace('current_time','curr_time')[0:],inplace = True)
+#         darkSkyDF.rename(columns = lambda x: x.replace('Unnamed: 0','request_id')[0:],inplace = True)
+#         darkSkyDF.rename(columns = lambda x: x.replace('curr_summary','curr_conditions')[0:],inplace = True)
+#         darkSkyDF.rename(columns = lambda x: x.replace('curr_icon','curr_expanded_summary')[0:],inplace = True)
+#         darkSkyDF['curr_time'] = pd.to_datetime(darkSkyDF['curr_time'], unit='s')
+#         darkSkyDF = darkSkyDF[['request_id','city_id','city','state_id', \
+#                                 'county_name','latitude','longitude', \
+#                                 'curr_time','curr_temperature','curr_apparentTemperature',\
+#                                 'curr_conditions','curr_expanded_summary','curr_precipIntensity',\
+#                                 'curr_dewPoint','curr_humidity','curr_precipProbability',\
+#                                 'curr_cloudCover','curr_windSpeed',\
+#                                 'curr_windGust','curr_windBearing','curr_visibility',\
+#                                 'curr_nearestStormDistance'
+#                                 ]]
+#         # DarkSkyDB is the Database file that will be inserted into SQL/used as Pandas DataFrame 
+#         darkSkyDF.to_csv('/Users/ericrivetna/desktop/data analysis/DarkSkyDB1.csv')
+
+        
+#     return darkSkyDF
+getWeatherData_311()
 
 def histogram_austin_311():
         austin_311_df = pd.read_pickle("austin_311_df.pkl")
